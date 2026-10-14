@@ -1,0 +1,8 @@
+# Ubuntu packages install.sh installs.  One per line; # starts a comment.
+emacs
+syncthing
+git
+curl
+fswatch
+fonts-firacode
+fonts-cantarell
