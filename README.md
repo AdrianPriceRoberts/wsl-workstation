@@ -14,6 +14,8 @@ keeps running in the background whether or not Emacs or a terminal is open.
      asks you to pick a user name and password; remember the password.
    - install Emacs and Syncthing inside Ubuntu, asking for that password.
    - make Windows keep Ubuntu running in the background from sign-in.
+   - offer to restart WSL for a network setting. Say no if you have work
+     open in WSL; it then applies at your next reboot.
    - check that everything works.
 3. **Connect it to a computer that already has your notes.** In Ubuntu, run
 

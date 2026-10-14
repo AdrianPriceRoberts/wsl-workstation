@@ -85,8 +85,7 @@ if ($LASTEXITCODE -ne 0) {
     Warn "Restart Windows, then run setup again to continue."
     exit 0
 }
-& wsl.exe --update *> $null
-Note "Installed and up to date"
+Note "Installed"
 
 Step "Linux distribution '$Distro'"
 $installed = @(& wsl.exe --list --quiet) | ForEach-Object { $_.Trim() } | Where-Object { $_ }
@@ -140,7 +139,8 @@ $installSh = Get-LinuxPath (Join-Path $PSScriptRoot "wsl\install.sh")
 for ($attempt = 1; $attempt -le 2; $attempt++) {
     & wsl.exe -d $Distro --cd "~" -- bash $installSh
     if ($LASTEXITCODE -eq 10 -and $attempt -eq 1) {
-        Note "Restarting $Distro so systemd starts..."
+        Warn "$Distro must restart for systemd to start.  This closes every program running in it."
+        Read-Host "    Save your work in $Distro, then press Enter to restart it (Ctrl+C to stop here)"
         & wsl.exe --terminate $Distro | Out-Null
         continue
     }
@@ -165,10 +165,16 @@ $lnk.Save()
 Note "Starts at every sign-in: $lnkPath"
 
 if ($needShutdown) {
-    Warn "WSL must restart once for the network change.  This closes every WSL window,"
-    Warn "including Emacs, so save your work first."
-    Read-Host "    Press Enter to restart WSL now"
-    & wsl.exe --shutdown
+    Warn "The network change takes effect the next time WSL restarts (e.g. after a reboot)."
+    Warn "Restarting now closes every WSL window and program, including Emacs and anything"
+    Warn "else running in WSL.  Everything else works without it."
+    $answer = Read-Host "    Restart WSL now? [y/N]"
+    if ($answer -match '^(y|yes)$') {
+        & wsl.exe --shutdown
+    } else {
+        Note "Skipped.  Later, close your WSL programs and run 'wsl --shutdown' in PowerShell,"
+        Note "or just restart Windows."
+    }
 }
 Start-Process -FilePath $lnkPath
 Start-Sleep -Seconds 5
