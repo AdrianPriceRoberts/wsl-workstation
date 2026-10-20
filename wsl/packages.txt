@@ -4,5 +4,8 @@ syncthing
 git
 curl
 fswatch
+ripgrep
+fd-find
+fontconfig
 fonts-firacode
 fonts-cantarell

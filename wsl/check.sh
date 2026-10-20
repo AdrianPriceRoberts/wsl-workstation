@@ -19,6 +19,15 @@ else bad "Linger is off: sudo loginctl enable-linger $USER"; fi
 if pgrep -fx 'sleep infinity' >/dev/null; then ok "Windows is keeping WSL running (keep-alive found)"
 else bad "No keep-alive: WSL stops when its windows close.  Run setup.cmd on Windows"; fi
 
+# type -P: only real programs count, which is what Emacs can run.
+for tool in rg fd; do
+  if type -P "$tool" >/dev/null; then ok "$tool is installed (Emacs uses it for searching)"
+  else bad "$tool is missing: run install.sh"; fi
+done
+
+if fc-list : family | grep -q "Symbols Nerd Font Mono"; then ok "Icon font for Emacs is installed"
+else bad "Icon font missing (Emacs shows boxes instead of icons): run install.sh"; fi
+
 syncthing cli show system >/dev/null 2>&1 || { bad "Syncthing's API isn't answering"; exit 1; }
 
 if folder_known; then

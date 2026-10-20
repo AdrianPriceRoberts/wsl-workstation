@@ -92,6 +92,8 @@ $installed = @(& wsl.exe --list --quiet) | ForEach-Object { $_.Trim() } | Where-
 if ($installed -notcontains $Distro) {
     Note "Installing $Distro.  When it asks, choose a Linux user name and password"
     Note "(they don't have to match Windows; remember the password, sudo asks for it)."
+    Note "If it then leaves you at a Linux prompt ending in '`$', type exit and press"
+    Note "Enter, and setup carries on."
     & wsl.exe --install -d $Distro
     if ($LASTEXITCODE -ne 0) { throw "Installing $Distro failed." }
 } else {

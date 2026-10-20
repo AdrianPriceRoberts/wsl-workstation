@@ -33,6 +33,13 @@ folder_known() {
   syncthing cli config folders list | grep -qx "$SYNC_FOLDER_ID"
 }
 
+# Absolute path of Syncthing folder FOLDER-ID on this computer.
+folder_path() {
+  local p
+  p=$(syncthing cli config folders "$1" path get)
+  realpath -m "${p/#\~/$HOME}"
+}
+
 # Make DEVICE-ID a known device (named NAME) that shares the sync folder.
 share_folder_with() {
   local id="$1" name="$2"; shift 2
