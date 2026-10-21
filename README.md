@@ -162,6 +162,9 @@ Restart Emacs after editing it.
 - **A file named `...sync-conflict-...` appeared.** Two computers changed
   the same file before they could sync. Both versions are kept. In Emacs,
   run `M-x my/resolve-sync-conflict` to choose which one to keep.
+- **Setup was stopped while Ubuntu asked for a user name**, and now says
+  *Run this as your normal user, not root*: double-click `setup.cmd`
+  again. It notices that Ubuntu has no user yet and asks you for one.
 - **Emacs shows boxes instead of icons, or says ripgrep is not found.** Run
   `~/wsl-workstation/wsl/install.sh` in Ubuntu, then restart Emacs.
 

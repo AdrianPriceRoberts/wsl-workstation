@@ -100,6 +100,33 @@ if ($installed -notcontains $Distro) {
     Note "Already installed"
 }
 
+Step "Linux user"
+# If choosing a user name was cancelled, Ubuntu has no user of its own and
+# logs everyone in as root.  Make (or find) one, and make it the default.
+$linuxUser = (& wsl.exe -d $Distro -- whoami).Trim()
+if ($linuxUser -eq "root") {
+    $linuxUser = (& wsl.exe -d $Distro -u root -- sh -c 'getent passwd 1000 | cut -d: -f1').Trim()
+    if ($linuxUser) {
+        Note "Using the existing user '$linuxUser'"
+    } else {
+        Warn "$Distro has no user of its own yet (choosing one was probably cancelled)."
+        do {
+            $linuxUser = (Read-Host "    Choose a Linux user name (lower-case letters and digits, e.g. sam)").Trim()
+        } until ($linuxUser -cmatch '^[a-z][a-z0-9_-]{0,31}$')
+        & wsl.exe -d $Distro -u root -- useradd -m -s /bin/bash -G sudo $linuxUser
+        if ($LASTEXITCODE -ne 0) { throw "Creating the user '$linuxUser' failed." }
+        Note "Now choose its password (remember it; sudo asks for it):"
+        do { & wsl.exe -d $Distro -u root -- passwd $linuxUser } until ($LASTEXITCODE -eq 0)
+    }
+    $setDefault = @'
+f=/etc/wsl.conf; touch $f; if grep -q '^\[user\]' $f; then sed -i '/^\[user\]/,/^\[/{/^default[[:space:]]*=/d}' $f; sed -i '/^\[user\]/a default=NAME' $f; else printf '\n[user]\ndefault=NAME\n' >> $f; fi
+'@ -replace 'NAME', $linuxUser
+    & wsl.exe -d $Distro -u root -- sh -c $setDefault.Trim()
+    Note "'$linuxUser' is now the default user (from the next time $Distro restarts)"
+} else {
+    Note "Using '$linuxUser'"
+}
+
 Step "WSL networking"
 $wslconfig = Join-Path $env:USERPROFILE ".wslconfig"
 $needShutdown = $false
@@ -139,7 +166,7 @@ foreach ($r in @(@('Syncthing-TCP','TCP',22000), @('Syncthing-QUIC','UDP',22000)
 Step "Emacs and Syncthing inside $Distro"
 $installSh = Get-LinuxPath (Join-Path $PSScriptRoot "wsl\install.sh")
 for ($attempt = 1; $attempt -le 2; $attempt++) {
-    & wsl.exe -d $Distro --cd "~" -- bash $installSh
+    & wsl.exe -d $Distro -u $linuxUser --cd "~" -- bash $installSh
     if ($LASTEXITCODE -eq 10 -and $attempt -eq 1) {
         Warn "$Distro must restart for systemd to start.  This closes every program running in it."
         Read-Host "    Save your work in $Distro, then press Enter to restart it (Ctrl+C to stop here)"
@@ -183,7 +210,7 @@ Start-Sleep -Seconds 5
 Note "Keep-alive started"
 
 Step "Checking"
-& wsl.exe -d $Distro --cd "~" -- bash ~/wsl-workstation/wsl/check.sh
+& wsl.exe -d $Distro -u $linuxUser --cd "~" -- bash ~/wsl-workstation/wsl/check.sh
 
 Write-Host ""
 Write-Host "All set.  Open Emacs from the Start menu or by running 'emacs' in Ubuntu."
