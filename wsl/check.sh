@@ -19,6 +19,12 @@ else bad "Linger is off: sudo loginctl enable-linger $USER"; fi
 if pgrep -fx 'sleep infinity' >/dev/null; then ok "Windows is keeping WSL running (keep-alive found)"
 else bad "No keep-alive: WSL stops when its windows close.  Run setup.cmd on Windows"; fi
 
+if type -P emacs >/dev/null; then ok "Emacs $(emacs --version | head -1 | awk '{print $3}') is installed"
+else bad "Emacs is missing: run install.sh"; fi
+
+if [[ -d ~/.emacs.d ]]; then ok "Emacs configuration in ~/.emacs.d"
+else bad "No Emacs configuration in ~/.emacs.d: set EMACS_CONFIG_REPO in config.env and run install.sh"; fi
+
 # type -P: only real programs count, which is what Emacs can run.
 for tool in rg fd; do
   if type -P "$tool" >/dev/null; then ok "$tool is installed (Emacs uses it for searching)"

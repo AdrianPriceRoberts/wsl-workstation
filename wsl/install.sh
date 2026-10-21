@@ -10,6 +10,13 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 [[ $EUID -ne 0 ]] || die "Run this as your normal user, not root; it uses sudo where needed."
 grep -qi microsoft /proc/version || die "This is meant to run inside WSL."
 
+# Keep a copy of everything printed, for when something goes wrong.
+log=~/.cache/wsl-workstation/install.log
+mkdir -p "$(dirname "$log")"
+exec > >(tee -a "$log") 2>&1
+echo "--- install.sh $(date '+%F %T')"
+trap 'die "Stopped at line $LINENO of install.sh: $BASH_COMMAND (log: $log)"' ERR
+
 step "Systemd (runs Syncthing in the background)"
 if grep -qsE '^[[:space:]]*systemd[[:space:]]*=[[:space:]]*true' /etc/wsl.conf; then
   note "Already on in /etc/wsl.conf"

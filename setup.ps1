@@ -19,6 +19,15 @@ param(
 $ErrorActionPreference = "Stop"
 $env:WSL_UTF8 = "1"   # make wsl.exe print plain text, not UTF-16
 
+# Any error ends setup with a message that can't be mistaken for success.
+trap {
+    Write-Host ""
+    Write-Host "Setup did NOT finish: $_" -ForegroundColor Red
+    Write-Host "Fix what it says (or send these messages to whoever gave you this setup)," -ForegroundColor Red
+    Write-Host "then run setup.cmd again; it carries on from where it stopped." -ForegroundColor Red
+    exit 1
+}
+
 function Step($Message) { Write-Host "`n==> $Message" -ForegroundColor Cyan }
 function Note($Message) { Write-Host "    $Message" }
 function Warn($Message) { Write-Host "    $Message" -ForegroundColor Yellow }
@@ -105,7 +114,7 @@ Step "Linux user"
 # logs everyone in as root.  Make (or find) one, and make it the default.
 $linuxUser = (& wsl.exe -d $Distro -- whoami).Trim()
 if ($linuxUser -eq "root") {
-    $linuxUser = (& wsl.exe -d $Distro -u root -- sh -c 'getent passwd 1000 | cut -d: -f1').Trim()
+    $linuxUser = (& wsl.exe -d $Distro -u root --exec sh -c 'getent passwd 1000 | cut -d: -f1').Trim()
     if ($linuxUser) {
         Note "Using the existing user '$linuxUser'"
     } else {
@@ -121,7 +130,7 @@ if ($linuxUser -eq "root") {
     $setDefault = @'
 f=/etc/wsl.conf; touch $f; if grep -q '^\[user\]' $f; then sed -i '/^\[user\]/,/^\[/{/^default[[:space:]]*=/d}' $f; sed -i '/^\[user\]/a default=NAME' $f; else printf '\n[user]\ndefault=NAME\n' >> $f; fi
 '@ -replace 'NAME', $linuxUser
-    & wsl.exe -d $Distro -u root -- sh -c $setDefault.Trim()
+    & wsl.exe -d $Distro -u root --exec sh -c $setDefault.Trim()
     Note "'$linuxUser' is now the default user (from the next time $Distro restarts)"
 } else {
     Note "Using '$linuxUser'"
@@ -173,9 +182,21 @@ for ($attempt = 1; $attempt -le 2; $attempt++) {
         & wsl.exe --terminate $Distro | Out-Null
         continue
     }
-    if ($LASTEXITCODE -ne 0) { throw "install.sh failed (exit $LASTEXITCODE); see the messages above." }
+    if ($LASTEXITCODE -ne 0) {
+        throw ("Installing inside $Distro failed (exit $LASTEXITCODE); see the messages above, or the log at " +
+               "\\wsl.localhost\$Distro\home\$linuxUser\.cache\wsl-workstation\install.log")
+    }
     break
 }
+
+# Don't report success unless the programs are really there.
+$missing = @(& wsl.exe -d $Distro -u $linuxUser --exec sh -c 'for c in emacs syncthing git rg fd; do command -v $c >/dev/null || echo $c; done') |
+    ForEach-Object { $_.Trim() } | Where-Object { $_ }
+if ($missing) { throw "Still missing in $Distro after installing: $($missing -join ', ')" }
+Note "Emacs, Syncthing, git, ripgrep and fd are installed in $Distro"
+
+# Make plain 'wsl' and new terminal tabs open this distribution.
+& wsl.exe --set-default $Distro | Out-Null
 
 Step "Keep WSL running in the background"
 # WSL shuts a distribution down shortly after its last window closes, which
@@ -213,6 +234,7 @@ Step "Checking"
 & wsl.exe -d $Distro -u $linuxUser --cd "~" -- bash ~/wsl-workstation/wsl/check.sh
 
 Write-Host ""
-Write-Host "All set.  Open Emacs from the Start menu or by running 'emacs' in Ubuntu."
+Write-Host "All set.  Open Emacs from the Start menu (Emacs ($Distro)), or open $Distro from"
+Write-Host "the Start menu (or type 'wsl' in PowerShell) and run 'emacs'."
 Write-Host "To connect this PC to another one with your files, run in Ubuntu:"
 Write-Host "    ~/wsl-workstation/wsl/join.sh"
